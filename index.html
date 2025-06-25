@@ -6,54 +6,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; width: 100vw; }
-
+    body, html {
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100vh;
+      width: calc(100vw - 250px);
+      float: right;
+    }
     #dashboard {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(30, 30, 30, 0.8);
-      color: #fff;
-      padding: 14px 18px;
-      border-radius: 12px;
-      font-family: 'Segoe UI', sans-serif;
-      font-size: 14px;
-      max-width: 300px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-      z-index: 9999;
-      line-height: 1.6;
+      width: 250px;
+      height: 100vh;
+      background-color: #f9f9f9;
+      padding: 15px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+      font-family: Arial, sans-serif;
+      position: fixed;
+      left: 0;
+      top: 0;
+      overflow-y: auto;
     }
-
-    #dashboard h3 {
-      margin-top: 0;
+    #dashboard h2 {
+      font-size: 18px;
       margin-bottom: 10px;
-      font-size: 16px;
-      color: #00e6e6;
     }
-
-    .dash-item {
-      margin-bottom: 6px;
+    #dashboard p {
+      font-size: 14px;
+      margin: 6px 0;
+      word-break: break-word;
     }
-
-    .dash-label {
-      font-weight: 500;
-      color: #aaa;
-    }
-
-    .dash-value {
-      color: #fff;
+    button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
   <div id="dashboard">
-    <h3>📊 Device Dashboard</h3>
-    <div class="dash-item"><span class="dash-label">ID:</span> <span class="dash-value" id="deviceId">Loading...</span></div>
-    <div class="dash-item"><span class="dash-label">Lat/Lng:</span> <span class="dash-value" id="latlng">Loading...</span></div>
-    <div class="dash-item"><span class="dash-label">Battery:</span> <span class="dash-value" id="battery">Loading...</span></div>
-    <div class="dash-item"><span class="dash-label">SOS:</span> <span class="dash-value" id="sos">Loading...</span></div>
+    <h2>Device Info</h2>
+    <p><strong>ID:</strong> <span id="deviceId">Loading...</span></p>
+    <p><strong>Lat:</strong> <span id="lat">-</span></p>
+    <p><strong>Lng:</strong> <span id="lng">-</span></p>
+    <p><strong>Battery:</strong> <span id="battery">-</span></p>
+    <p><strong>SOS:</strong> <span id="sos">-</span></p>
+    <button id="navBtn" disabled>🚗 Drive Here</button>
+    <button id="streetBtn" disabled>🗺️ Street View</button>
   </div>
+
+  <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -64,7 +71,8 @@
     const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: 'Google Hybrid' });
 
     hybrid.addTo(map);
-    L.control.layers({ "Normal Map": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
+    const baseMaps = { "Normal": normal, "Satellite": satellite, "Hybrid": hybrid };
+    L.control.layers(baseMaps).addTo(map);
 
     let marker = null;
     const BIN_URL = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
@@ -76,34 +84,44 @@
           headers: { "X-Access-Key": API_KEY }
         });
         const data = await res.json();
-        const record = data.record;
-        const lat = record.location.lat;
-        const lng = record.location.lng;
-
-        // Update Marker
-        if (marker) map.removeLayer(marker);
-        marker = L.marker([lat, lng]).addTo(map)
-          .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br>
-            <button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br>
-            <button onclick="goToStreetView(${lat}, ${lng})">Street View</button>`).openPopup();
-        map.setView([lat, lng]);
+        const lat = data.record.location.lat;
+        const lng = data.record.location.lng;
+        const id = data.record.device_id || "N/A";
+        const battery = data.record.battery || "-";
+        const sos = data.record.sos ? "Triggered 🚨" : "Normal ✅";
 
         // Update Dashboard
-        document.getElementById('deviceId').innerText = record.deviceId || 'Unknown';
-        document.getElementById('latlng').innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        document.getElementById('battery').innerText = record.battery ? `${record.battery}%` : 'N/A';
-        document.getElementById('sos').innerText = record.sos ? '🆘 YES' : '✅ Safe';
+        document.getElementById("deviceId").textContent = id;
+        document.getElementById("lat").textContent = lat.toFixed(6);
+        document.getElementById("lng").textContent = lng.toFixed(6);
+        document.getElementById("battery").textContent = battery + "%";
+        document.getElementById("sos").textContent = sos;
+
+        // Enable buttons
+        document.getElementById("navBtn").disabled = false;
+        document.getElementById("streetBtn").disabled = false;
+        document.getElementById("navBtn").onclick = () => goToGMaps(lat, lng);
+        document.getElementById("streetBtn").onclick = () => goToStreetView(lat, lng);
+
+        // Marker update
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat, lng]).addTo(map).bindPopup(
+          `Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br><button onclick="goToStreetView(${lat}, ${lng})">Street View</button>`
+        ).openPopup();
+        map.setView([lat, lng]);
       } catch (e) {
-        console.error("Failed to fetch location", e);
+        console.error("Failed to fetch location:", e);
       }
     }
 
     function goToGMaps(lat, lng) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      window.open(url, '_blank');
     }
 
     function goToStreetView(lat, lng) {
-      window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, '_blank');
+      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
+      window.open(url, '_blank');
     }
 
     setInterval(fetchLocation, 5000);
