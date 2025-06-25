@@ -1,139 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>ESP32 Real-time GPS Tracker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>ESP32 GPS Tracker</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body, html {
+    html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
       font-family: Arial, sans-serif;
     }
-    #map {
+
+    #container {
+      display: flex;
       height: 100vh;
-      width: calc(100vw - 220px);
-      float: right;
     }
+
     #dashboard {
       width: 220px;
-      height: 100vh;
-      background-color: #f4f4f4;
-      padding: 16px;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 1000;
-    }
-    #dashboard h2 {
-      font-size: 17px;
-      margin-bottom: 15px;
-      color: #333;
-    }
-    #dashboard p {
-      margin: 6px 0;
-      font-size: 13px;
-      color: #555;
-    }
-    .button-group {
-      margin-top: 12px;
-    }
-    .button-group button {
-      width: 100%;
-      margin-bottom: 8px;
+      background-color: #f8f9fa;
       padding: 10px;
-      font-size: 13px;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      background-color: #007bff;
-      cursor: pointer;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      font-size: 14px;
     }
-    .button-group button:hover {
+
+    #map {
+      flex: 1;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 6px 10px;
+      background-color: #007bff;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .btn:hover {
       background-color: #0056b3;
     }
   </style>
 </head>
 <body>
-  <div id="dashboard">
-    <h2>📡 Device Dashboard</h2>
-    <p><strong>ID:</strong> <span id="deviceId">Loading...</span></p>
-    <p><strong>Latitude:</strong> <span id="lat">-</span></p>
-    <p><strong>Longitude:</strong> <span id="lng">-</span></p>
-    <p><strong>Battery:</strong> <span id="battery">-</span></p>
-    <p><strong>SOS:</strong> <span id="sos">-</span></p>
-    <div class="button-group">
-      <button id="navBtn" onclick="goToGMaps()">🚗 Drive Here</button>
-      <button id="streetBtn" onclick="goToStreetView()">🏙️ Street View</button>
+  <div id="container">
+    <div id="dashboard">
+      <h4>📡 Device Dashboard</h4>
+      <div><b>ID:</b> <span id="id">Loading...</span></div>
+      <div><b>Latitude:</b> <span id="lat">-</span></div>
+      <div><b>Longitude:</b> <span id="lon">-</span></div>
+      <div><b>Battery:</b> <span id="bat">-</span></div>
+      <div><b>SOS:</b> <span id="sos">-</span></div>
+      <a id="drive" class="btn" href="#" target="_blank">🚗 Drive Here</a>
+      <a id="street" class="btn" href="#" target="_blank">🗺️ Street View</a>
     </div>
+    <div id="map"></div>
   </div>
 
-  <div id="map"></div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([3.83, 103.32], 17);
+    const BIN_ID = "685bcd5b8960c979a5b10ee3";
+    const API_KEY = "你的 X-Access-Key";  // 只读 Access Key（不是 Master Key）
+    const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}/latest`;
 
-    const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: 'Google Satellite' });
-    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: 'Google Hybrid' });
-
-    hybrid.addTo(map);
-    L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
-
-    const BIN_URL = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
-    const API_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+    let map = L.map('map').setView([3.139, 101.6869], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
 
     let marker = null;
-    let currentLat = null;
-    let currentLng = null;
 
-    async function fetchLocation() {
-      try {
-        const res = await fetch(BIN_URL, {
-          headers: { "X-Access-Key": API_KEY }
-        });
-        const data = await res.json();
-        const lat = data.record.location.lat;
-        const lng = data.record.location.lng;
-        currentLat = lat;
-        currentLng = lng;
+    function updateData() {
+      fetch(JSONBIN_URL, {
+        headers: {
+          'X-Access-Key': API_KEY
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        const record = data.record;
+        const lat = record.latitude;
+        const lon = record.longitude;
+        const battery = record.battery || "-";
+        const sos = record.sos ? "✅ TRIGGERED" : "❌ Normal";
 
-        document.getElementById("deviceId").textContent = data.record.device_id || "N/A";
-        document.getElementById("lat").textContent = lat.toFixed(6);
-        document.getElementById("lng").textContent = lng.toFixed(6);
-        document.getElementById("battery").textContent = (data.record.battery || "-") + "%";
-        document.getElementById("sos").textContent = data.record.sos ? "🚨 Triggered" : "✅ Normal";
+        document.getElementById("id").innerText = data.metadata.id;
+        document.getElementById("lat").innerText = lat;
+        document.getElementById("lon").innerText = lon;
+        document.getElementById("bat").innerText = battery;
+        document.getElementById("sos").innerText = sos;
 
-        if (marker) map.removeLayer(marker);
-        marker = L.marker([lat, lng]).addTo(map)
-          .bindPopup(`📍 Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`).openPopup();
-        map.setView([lat, lng]);
+        document.getElementById("drive").href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+        document.getElementById("street").href = `https://www.google.com/maps?q=&layer=c&cbll=${lat},${lon}`;
 
-      } catch (e) {
-        console.error("Error fetching location:", e);
-      }
+        if (marker) {
+          map.removeLayer(marker);
+        }
+        marker = L.marker([lat, lon]).addTo(map).bindPopup("Current Location").openPopup();
+        map.setView([lat, lon], 17);
+      })
+      .catch(error => {
+        console.error("Failed to fetch JSONBin:", error);
+      });
     }
 
-    function goToGMaps() {
-      if (currentLat && currentLng) {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${currentLat},${currentLng}`;
-        window.open(url, "_blank");
-      }
-    }
-
-    function goToStreetView() {
-      if (currentLat && currentLng) {
-        const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${currentLat},${currentLng}`;
-        window.open(url, "_blank");
-      }
-    }
-
-    fetchLocation();
-    setInterval(fetchLocation, 5000);
+    updateData();
+    setInterval(updateData, 10000);
   </script>
 </body>
 </html>
