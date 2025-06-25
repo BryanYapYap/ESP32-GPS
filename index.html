@@ -2,70 +2,79 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>People Safety Real-Time Tracker</title>
+  <title>People Safety Tracker - OSM Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #map { height: 100%; width: 100%; }
+    html, body, #map { height: 100%; margin: 0; }
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-  <div id="map"></div>
-  <script>
-    const map = L.map('map').setView([3.8, 103.3], 18); // 预设在 Kuantan
+<div id="map"></div>
 
-    // 地图底图选项
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '© Esri',
-      maxZoom: 20
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
+<script>
+  const map = L.map('map').setView([0, 0], 15);
+
+  // Base layers
+  const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  });
+
+  const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    subdomains: ['mt0','mt1','mt2','mt3'],
+    attribution: 'Google Satellite'
+  });
+
+  const hybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    subdomains: ['mt0','mt1','mt2','mt3'],
+    attribution: 'Google Hybrid'
+  });
+
+  const baseMaps = {
+    "Normal Map": normal,
+    "Satellite": satellite,
+    "Hybrid": hybrid
+  };
+
+  normal.addTo(map);
+  L.control.layers(baseMaps).addTo(map);
+
+  // Add geocoder
+  L.Control.geocoder().addTo(map);
+
+  // Add routing (from current to clicked point)
+  let control;
+  map.on('click', function(e) {
+    if (control) map.removeControl(control);
+    control = L.Routing.control({
+      waypoints: [L.latLng(lat, lng), e.latlng],
+      routeWhileDragging: true
     }).addTo(map);
+  });
 
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+  // Real-time location fetch from JSONBin
+  const binId = "685bcd5b8960c979a5b10ee3";
+  const accessKey = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+  let marker;
+
+  async function updateLocation() {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      headers: { 'X-Access-Key': accessKey }
     });
+    const data = await res.json();
+    const { lat, lng } = data.record;
 
-    const gray = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '© Esri (Gray)'
-    });
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map)
+      .bindPopup("Current Location").openPopup();
+    map.setView([lat, lng]);
+  }
 
-    const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© CartoDB'
-    });
-
-    const baseMaps = {
-      "🛰️ 卫星图": satellite,
-      "🌍 OSM": osm,
-      "🗺️ 灰色图": gray,
-      "🌙 暗黑图": dark
-    };
-
-    L.control.layers(baseMaps).addTo(map);
-
-    // 标记初始化
-    const marker = L.marker([0, 0]).addTo(map).bindPopup("等待定位...");
-
-    // 获取定位函数
-    async function fetchLocation() {
-      try {
-        const response = await fetch("https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest", {
-          headers: {
-            "X-Access-Key": "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6"
-          }
-        });
-        const data = await response.json();
-        const lat = data.record.latitude;
-        const lon = data.record.longitude;
-        marker.setLatLng([lat, lon]).setPopupContent(`📍 实时定位<br>纬度：${lat}<br>经度：${lon}`).openPopup();
-        map.setView([lat, lon]);
-      } catch (e) {
-        console.error("获取定位失败", e);
-      }
-    }
-
-    setInterval(fetchLocation, 5000);
-    fetchLocation();
-  </script>
+  setInterval(updateLocation, 5000);
+</script>
 </body>
 </html>
