@@ -1,44 +1,72 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>Live Location</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body { margin: 0; height: 100%; }
-    #map { width: 100%; height: 100%; }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
+  <head>
+    <meta charset="utf-8" />
+    <title>ESP32 实时定位地图</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: sans-serif;
+      }
+      #map {
+        height: 90vh;
+      }
+      #status {
+        padding: 10px;
+        font-size: 1.1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">🛰️ 正在加载定位...</div>
+    <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    const BIN_ID = "685bcd5b8960c979a5b10ee3";
-    const ACCESS_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const map = L.map("map").setView([0, 0], 2);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(map);
 
-    const map = L.map('map').setView([0, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    const marker = L.marker([0, 0]).addTo(map);
+      let marker;
 
-    function updateLocation() {
-      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-        headers: { 'X-Access-Key': ACCESS_KEY }
-      })
-        .then(res => res.json())
-        .then(data => {
-          const { lat, lng } = data.record;
+      const binUrl =
+        "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
+      const headers = {
+        "X-Access-Key":
+          "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6",
+      };
+
+      fetch(binUrl, { headers })
+        .then((response) => response.json())
+        .then((data) => {
+          const lat = data.record.lat;
+          const lng = data.record.lng;
+
           if (lat && lng) {
-            marker.setLatLng([lat, lng]);
-            map.setView([lat, lng], 17);
+            document.getElementById("status").innerText = `📍 当前定位：${lat}, ${lng}`;
+            if (marker) map.removeLayer(marker);
+            map.setView([lat, lng], 16);
+            marker = L.marker([lat, lng])
+              .addTo(map)
+              .bindPopup("📍 实时位置")
+              .openPopup();
+          } else {
+            document.getElementById("status").innerText =
+              "❌ 无定位数据，请检查 JSONBin 格式";
           }
         })
-        .catch(err => console.error("Fetch error", err));
-    }
-
-    setInterval(updateLocation, 5000);
-    updateLocation();
-  </script>
-</body>
+        .catch((err) => {
+          document.getElementById("status").innerText =
+            "⚠️ 加载失败：" + err;
+        });
+    </script>
+  </body>
 </html>
