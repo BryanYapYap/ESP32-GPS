@@ -6,20 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #map { height: 70vh; width: 100vw; }
-    #dashboard {
-      padding: 10px;
-      background: #f8f9fa;
-      box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-    }
-    #dashboard h2 {
-      margin-top: 0;
-      font-size: 18px;
-    }
-    .info-item {
-      margin: 6px 0;
-    }
+    body { margin: 0; padding: 0; }
+    #map { height: 100vh; width: 100vw; }
     .leaflet-top.leaflet-right {
       display: flex;
       flex-direction: column;
@@ -35,18 +23,37 @@
       font-size: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
+    #dashboard {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 999;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      min-width: 240px;
+    }
+    #dashboard h4 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="dashboard">
-    <h2>📊 Device Dashboard</h2>
-    <div class="info-item" id="deviceId">🆔 Device ID: Loading...</div>
-    <div class="info-item" id="location">📍 Lat/Lng: Loading...</div>
-    <div class="info-item" id="voltage">🔋 Voltage: Loading...</div>
-    <div class="info-item" id="battery">⚡ Battery: Loading...</div>
-    <div class="info-item" id="sos">🚨 SOS: Loading...</div>
-    <div class="info-item" id="accuracy">📶 Accuracy: Loading...</div>
+    <h4>📊 Device Dashboard</h4>
+    <div><b>Device ID:</b> <span id="dev_id">-</span></div>
+    <div><b>Latitude:</b> <span id="lat">-</span></div>
+    <div><b>Longitude:</b> <span id="lng">-</span></div>
+    <div><b>Battery:</b> <span id="bat">-</span></div>
+    <div><b>SOS:</b> <span id="sos">-</span></div>
+    <div><b>Source:</b> <span id="src">-</span></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -61,7 +68,7 @@
       attribution: 'Google Hybrid'
     });
 
-    hybrid.addTo(map);
+    hybrid.addTo(map); // default
 
     const baseMaps = {
       "Normal Map": normal,
@@ -77,27 +84,29 @@
     async function fetchLocation() {
       try {
         const res = await fetch(BIN_URL, {
-          headers: {
-            "X-Access-Key": API_KEY
-          }
+          headers: { "X-Access-Key": API_KEY }
         });
         const data = await res.json();
-        const record = data.record;
-        const lat = record.location.lat;
-        const lng = record.location.lng;
+        const lat = data.record.location.lat;
+        const lng = data.record.location.lng;
+        const id = data.record.device_id || "ESP32-Tracker";
+        const bat = data.record.battery || "N/A";
+        const sos = data.record.sos === true ? "🚨 ACTIVE" : "✅ Safe";
+        const src = data.record.source || "Unknown";
 
+        // 更新地图
         if (marker) map.removeLayer(marker);
         marker = L.marker([lat, lng]).addTo(map)
           .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br><button onclick="goToStreetView(${lat}, ${lng})">Street View</button>`).openPopup();
         map.setView([lat, lng]);
 
-        // Update dashboard
-        document.getElementById("deviceId").textContent = `🆔 Device ID: ${record.deviceId || 'ESP32-GPS'}`;
-        document.getElementById("location").textContent = `📍 Lat/Lng: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        document.getElementById("voltage").textContent = `🔋 Voltage: ${record.voltage || '3.7'} V`;
-        document.getElementById("battery").textContent = `⚡ Battery: ${record.battery || '90'}%`;
-        document.getElementById("sos").textContent = `🚨 SOS: ${record.sos ? 'Activated' : 'Safe'}`;
-        document.getElementById("accuracy").textContent = `📶 Accuracy: ${record.accuracy || 'N/A'}`;
+        // 更新 dashboard
+        document.getElementById("lat").textContent = lat.toFixed(6);
+        document.getElementById("lng").textContent = lng.toFixed(6);
+        document.getElementById("dev_id").textContent = id;
+        document.getElementById("bat").textContent = bat;
+        document.getElementById("sos").textContent = sos;
+        document.getElementById("src").textContent = src;
 
       } catch (e) {
         console.error("Failed to fetch location", e);
