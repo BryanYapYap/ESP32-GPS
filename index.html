@@ -2,79 +2,87 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>People Safety Tracker - OSM Map</title>
+  <title>Real-Time Tracker with Routing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <style>
-    html, body, #map { height: 100%; margin: 0; }
+    body, html { height: 100%; margin: 0; }
+    #map { width: 100%; height: 100vh; }
+    .leaflet-control-layers-toggle { background-image: url(https://leafletjs.com/examples/custom-icons/leaf-green.png); }
+    .control-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 999;
+      background: white;
+      border-radius: 5px;
+      padding: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
 <div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script>
-  const map = L.map('map').setView([0, 0], 15);
+const BIN_ID = "685bcd5b8960c979a5b10ee3";
+const ACCESS_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+let currentMarker, routeControl, currentPos;
 
-  // Base layers
-  const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  });
+const map = L.map('map').setView([3.8, 103.3], 15);
+const baseLayers = {
+  "Normal": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map),
+  "Satellite": L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap HOT'
+  })
+};
+L.control.layers(baseLayers).addTo(map);
 
-  const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    subdomains: ['mt0','mt1','mt2','mt3'],
-    attribution: 'Google Satellite'
-  });
+// 目的地选择
+let destinationMarker = null;
+map.on('click', function(e) {
+  if (destinationMarker) map.removeLayer(destinationMarker);
+  destinationMarker = L.marker(e.latlng).addTo(map).bindPopup("目的地").openPopup();
+  if (routeControl) map.removeControl(routeControl);
+  if (!currentPos) return;
+  routeControl = L.Routing.control({
+    waypoints: [
+      L.latLng(currentPos[0], currentPos[1]),
+      L.latLng(e.latlng.lat, e.latlng.lng)
+    ],
+    routeWhileDragging: false
+  }).addTo(map);
+});
 
-  const hybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-    subdomains: ['mt0','mt1','mt2','mt3'],
-    attribution: 'Google Hybrid'
-  });
-
-  const baseMaps = {
-    "Normal Map": normal,
-    "Satellite": satellite,
-    "Hybrid": hybrid
-  };
-
-  normal.addTo(map);
-  L.control.layers(baseMaps).addTo(map);
-
-  // Add geocoder
-  L.Control.geocoder().addTo(map);
-
-  // Add routing (from current to clicked point)
-  let control;
-  map.on('click', function(e) {
-    if (control) map.removeControl(control);
-    control = L.Routing.control({
-      waypoints: [L.latLng(lat, lng), e.latlng],
-      routeWhileDragging: true
-    }).addTo(map);
-  });
-
-  // Real-time location fetch from JSONBin
-  const binId = "685bcd5b8960c979a5b10ee3";
-  const accessKey = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
-  let marker;
-
-  async function updateLocation() {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      headers: { 'X-Access-Key': accessKey }
+// 实时获取定位数据
+async function updateLocation() {
+  try {
+    const res = await axios.get(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      headers: {
+        'X-Access-Key': ACCESS_KEY
+      }
     });
-    const data = await res.json();
-    const { lat, lng } = data.record;
-
-    if (marker) map.removeLayer(marker);
-    marker = L.marker([lat, lng]).addTo(map)
-      .bindPopup("Current Location").openPopup();
-    map.setView([lat, lng]);
+    const { lat, lng } = res.data.record;
+    currentPos = [lat, lng];
+    if (currentMarker) {
+      currentMarker.setLatLng(currentPos);
+    } else {
+      currentMarker = L.marker(currentPos).addTo(map).bindPopup("当前位置").openPopup();
+      map.setView(currentPos, 18);
+    }
+  } catch (err) {
+    console.error("获取定位失败：", err);
   }
+}
 
-  setInterval(updateLocation, 5000);
+setInterval(updateLocation, 5000);
 </script>
 </body>
 </html>
