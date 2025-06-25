@@ -2,74 +2,43 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Real-time Location Tracker</title>
+  <title>Live Location</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- ✅ JSONBin 设置 -->
-  <script>
-    const BIN_ID = "685bcd5b8960c979a5b10ee3";  // ⬅️ 替换为你的 BIN ID
-    const ACCESS_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6"; // ⬅️ Read-only Access Key
-  </script>
-
-  <!-- Leaflet 地图样式 -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body { height: 100%; margin: 0; font-family: sans-serif; }
-    #map { height: 100%; }
-    #status {
-      position: absolute;
-      top: 10px; left: 10px;
-      background: rgba(255,255,255,0.9);
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 1000;
-    }
+    html, body { margin: 0; height: 100%; }
+    #map { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
-  <div id="status">⏳ 正在加载定位...</div>
   <div id="map"></div>
 
-  <!-- Leaflet 脚本 -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- 实时定位逻辑 -->
   <script>
-    let map = L.map('map').setView([0, 0], 15);
-    let marker = null;
+    const BIN_ID = "685bcd5b8960c979a5b10ee3";
+    const ACCESS_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const marker = L.marker([0, 0]).addTo(map);
 
-    function fetchLocation() {
+    function updateLocation() {
       fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
         headers: { 'X-Access-Key': ACCESS_KEY }
       })
-      .then(res => res.json())
-      .then(data => {
-        const { lat, lng, timestamp } = data.record;
-        if (!lat || !lng) return;
-
-        map.setView([lat, lng], 18);
-
-        if (marker) {
-          marker.setLatLng([lat, lng]);
-        } else {
-          marker = L.marker([lat, lng]).addTo(map);
-        }
-
-        document.getElementById("status").innerText = `✅ 最新位置：${lat.toFixed(5)}, ${lng.toFixed(5)}\n🕒 更新时间：${timestamp}`;
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById("status").innerText = "⚠️ 获取定位失败";
-      });
+        .then(res => res.json())
+        .then(data => {
+          const { lat, lng } = data.record;
+          if (lat && lng) {
+            marker.setLatLng([lat, lng]);
+            map.setView([lat, lng], 17);
+          }
+        })
+        .catch(err => console.error("Fetch error", err));
     }
 
-    // 初始加载 + 每 5 秒更新一次
-    fetchLocation();
-    setInterval(fetchLocation, 5000);
+    setInterval(updateLocation, 5000);
+    updateLocation();
   </script>
 </body>
 </html>
