@@ -7,46 +7,64 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100vw; }
-    .leaflet-top.leaflet-right {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 10px;
-    }
-    .custom-button {
-      background-color: white;
-      padding: 6px 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      cursor: pointer;
+
+    #dashboard {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(30, 30, 30, 0.8);
+      color: #fff;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-family: 'Segoe UI', sans-serif;
       font-size: 14px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      max-width: 300px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      z-index: 9999;
+      line-height: 1.6;
+    }
+
+    #dashboard h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #00e6e6;
+    }
+
+    .dash-item {
+      margin-bottom: 6px;
+    }
+
+    .dash-label {
+      font-weight: 500;
+      color: #aaa;
+    }
+
+    .dash-value {
+      color: #fff;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  
+  <div id="dashboard">
+    <h3>📊 Device Dashboard</h3>
+    <div class="dash-item"><span class="dash-label">ID:</span> <span class="dash-value" id="deviceId">Loading...</span></div>
+    <div class="dash-item"><span class="dash-label">Lat/Lng:</span> <span class="dash-value" id="latlng">Loading...</span></div>
+    <div class="dash-item"><span class="dash-label">Battery:</span> <span class="dash-value" id="battery">Loading...</span></div>
+    <div class="dash-item"><span class="dash-label">SOS:</span> <span class="dash-value" id="sos">Loading...</span></div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([3.83, 103.32], 17);
 
     const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-      attribution: 'Google Satellite'
-    });
-    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      attribution: 'Google Hybrid'
-    });
+    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: 'Google Satellite' });
+    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: 'Google Hybrid' });
 
-    hybrid.addTo(map); // default
-
-    const baseMaps = {
-      "Normal Map": normal,
-      "Satellite": satellite,
-      "Hybrid": hybrid
-    };
-    L.control.layers(baseMaps).addTo(map);
+    hybrid.addTo(map);
+    L.control.layers({ "Normal Map": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
     let marker = null;
     const BIN_URL = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
@@ -55,31 +73,37 @@
     async function fetchLocation() {
       try {
         const res = await fetch(BIN_URL, {
-          headers: {
-            "X-Access-Key": API_KEY
-          }
+          headers: { "X-Access-Key": API_KEY }
         });
         const data = await res.json();
-        const lat = data.record.location.lat;
-        const lng = data.record.location.lng;
+        const record = data.record;
+        const lat = record.location.lat;
+        const lng = record.location.lng;
 
+        // Update Marker
         if (marker) map.removeLayer(marker);
         marker = L.marker([lat, lng]).addTo(map)
-          .bindPopup(Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br><button onclick="goToStreetView(${lat}, ${lng})">Street View</button>).openPopup();
+          .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br>
+            <button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br>
+            <button onclick="goToStreetView(${lat}, ${lng})">Street View</button>`).openPopup();
         map.setView([lat, lng]);
+
+        // Update Dashboard
+        document.getElementById('deviceId').innerText = record.deviceId || 'Unknown';
+        document.getElementById('latlng').innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        document.getElementById('battery').innerText = record.battery ? `${record.battery}%` : 'N/A';
+        document.getElementById('sos').innerText = record.sos ? '🆘 YES' : '✅ Safe';
       } catch (e) {
         console.error("Failed to fetch location", e);
       }
     }
 
     function goToGMaps(lat, lng) {
-      const url = https://www.google.com/maps/dir/?api=1&destination=${lat},${lng};
-      window.open(url, '_blank');
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
     }
 
     function goToStreetView(lat, lng) {
-      const url = https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng};
-      window.open(url, '_blank');
+      window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, '_blank');
     }
 
     setInterval(fetchLocation, 5000);
