@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>People Safety Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const binId = "685bcd5b8960c979a5b10ee3";
+    const accessKey = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+
+    const proxy = "https://corsproxy.io/?";
+    const jsonBinUrl = `https://api.jsonbin.io/v3/b/${binId}/latest`;
+
+    fetch(proxy + jsonBinUrl, {
+      method: "GET",
+      headers: {
+        "X-Access-Key": accessKey
+      }
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      const lat = data.record.latitude || 0;
+      const lon = data.record.longitude || 0;
+
+      const map = L.map('map').setView([lat, lon], 15);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(map);
+
+      L.marker([lat, lon]).addTo(map)
+        .bindPopup("Current Location")
+        .openPopup();
+    })
+    .catch((err) => {
+      alert("Failed to load location: " + err);
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
