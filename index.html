@@ -1,56 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>People Safety Tracker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-  <style>
-    html, body, #map {
-      height: 100%;
-      margin: 0;
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    const binId = "685bcd5b8960c979a5b10ee3";
-    const accessKey = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
-
-    const proxy = "https://corsproxy.io/?";
-    const jsonBinUrl = `https://api.jsonbin.io/v3/b/${binId}/latest`;
-
-    fetch(proxy + jsonBinUrl, {
-      method: "GET",
-      headers: {
-        "X-Access-Key": accessKey
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Real-Time Location Tracker</title>
+    <style>
+      html, body, #map {
+        height: 100%;
+        margin: 0;
+        padding: 0;
       }
-    })
-    .then((res) => res.json())
-    .then((data) => {
-      const lat = data.record.latitude || 0;
-      const lon = data.record.longitude || 0;
+    </style>
+    <!-- Leaflet 地图样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  </head>
+  <body>
+    <div id="map"></div>
 
-      const map = L.map('map').setView([lat, lon], 15);
+    <script>
+      const binId = "685bcd5b8960c979a5b10ee3";
+      const accessKey = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+      const apiUrl = `https://api.jsonbin.io/v3/b/${binId}/latest`;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
+      const map = L.map("map").setView([3.8, 103.3], 15);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
 
-      L.marker([lat, lon]).addTo(map)
-        .bindPopup("Current Location")
-        .openPopup();
-    })
-    .catch((err) => {
-      alert("Failed to load location: " + err);
-      console.error(err);
-    });
-  </script>
-</body>
+      const marker = L.marker([3.8, 103.3]).addTo(map).bindPopup("Loading...").openPopup();
+
+      async function updateLocation() {
+        try {
+          const res = await fetch(apiUrl, {
+            headers: {
+              "X-Access-Key": accessKey,
+            },
+          });
+          const data = await res.json();
+          const { lat, lng } = data.record;
+
+          marker.setLatLng([lat, lng]);
+          map.setView([lat, lng], 17);
+          marker.setPopupContent(`📍 Current Location<br>Lat: ${lat}<br>Lng: ${lng}`);
+        } catch (err) {
+          console.error("Failed to fetch location:", err);
+        }
+      }
+
+      updateLocation();
+      setInterval(updateLocation, 5000);
+    </script>
+  </body>
 </html>
