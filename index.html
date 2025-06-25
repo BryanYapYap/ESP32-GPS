@@ -1,54 +1,75 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Real-Time Location Tracker</title>
-    <style>
-      html, body, #map {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-    </style>
-    <!-- Leaflet 地图样式 -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  </head>
-  <body>
-    <div id="map"></div>
+<head>
+  <meta charset="utf-8">
+  <title>Real-time Location Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ✅ JSONBin 设置 -->
+  <script>
+    const BIN_ID = "685bcd5b8960c979a5b10ee3";  // ⬅️ 替换为你的 BIN ID
+    const ACCESS_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6"; // ⬅️ Read-only Access Key
+  </script>
 
-    <script>
-      const binId = "685bcd5b8960c979a5b10ee3";
-      const accessKey = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
-      const apiUrl = `https://api.jsonbin.io/v3/b/${binId}/latest`;
+  <!-- Leaflet 地图样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body { height: 100%; margin: 0; font-family: sans-serif; }
+    #map { height: 100%; }
+    #status {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">⏳ 正在加载定位...</div>
+  <div id="map"></div>
 
-      const map = L.map("map").setView([3.8, 103.3], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
+  <!-- Leaflet 脚本 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-      const marker = L.marker([3.8, 103.3]).addTo(map).bindPopup("Loading...").openPopup();
+  <!-- 实时定位逻辑 -->
+  <script>
+    let map = L.map('map').setView([0, 0], 15);
+    let marker = null;
 
-      async function updateLocation() {
-        try {
-          const res = await fetch(apiUrl, {
-            headers: {
-              "X-Access-Key": accessKey,
-            },
-          });
-          const data = await res.json();
-          const { lat, lng } = data.record;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
 
+    function fetchLocation() {
+      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+        headers: { 'X-Access-Key': ACCESS_KEY }
+      })
+      .then(res => res.json())
+      .then(data => {
+        const { lat, lng, timestamp } = data.record;
+        if (!lat || !lng) return;
+
+        map.setView([lat, lng], 18);
+
+        if (marker) {
           marker.setLatLng([lat, lng]);
-          map.setView([lat, lng], 17);
-          marker.setPopupContent(`📍 Current Location<br>Lat: ${lat}<br>Lng: ${lng}`);
-        } catch (err) {
-          console.error("Failed to fetch location:", err);
+        } else {
+          marker = L.marker([lat, lng]).addTo(map);
         }
-      }
 
-      updateLocation();
-      setInterval(updateLocation, 5000);
-    </script>
-  </body>
+        document.getElementById("status").innerText = `✅ 最新位置：${lat.toFixed(5)}, ${lng.toFixed(5)}\n🕒 更新时间：${timestamp}`;
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById("status").innerText = "⚠️ 获取定位失败";
+      });
+    }
+
+    // 初始加载 + 每 5 秒更新一次
+    fetchLocation();
+    setInterval(fetchLocation, 5000);
+  </script>
+</body>
 </html>
