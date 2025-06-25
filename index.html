@@ -6,7 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; width: 100vw; }
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #map { height: 70vh; width: 100vw; }
+    #dashboard {
+      padding: 10px;
+      background: #f8f9fa;
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    }
+    #dashboard h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+    .info-item {
+      margin: 6px 0;
+    }
     .leaflet-top.leaflet-right {
       display: flex;
       flex-direction: column;
@@ -26,7 +39,16 @@
 </head>
 <body>
   <div id="map"></div>
-  
+  <div id="dashboard">
+    <h2>📊 Device Dashboard</h2>
+    <div class="info-item" id="deviceId">🆔 Device ID: Loading...</div>
+    <div class="info-item" id="location">📍 Lat/Lng: Loading...</div>
+    <div class="info-item" id="voltage">🔋 Voltage: Loading...</div>
+    <div class="info-item" id="battery">⚡ Battery: Loading...</div>
+    <div class="info-item" id="sos">🚨 SOS: Loading...</div>
+    <div class="info-item" id="accuracy">📶 Accuracy: Loading...</div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([3.83, 103.32], 17);
@@ -39,7 +61,7 @@
       attribution: 'Google Hybrid'
     });
 
-    hybrid.addTo(map); // default
+    hybrid.addTo(map);
 
     const baseMaps = {
       "Normal Map": normal,
@@ -60,13 +82,23 @@
           }
         });
         const data = await res.json();
-        const lat = data.record.location.lat;
-        const lng = data.record.location.lng;
+        const record = data.record;
+        const lat = record.location.lat;
+        const lng = record.location.lng;
 
         if (marker) map.removeLayer(marker);
         marker = L.marker([lat, lng]).addTo(map)
           .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br><button onclick="goToStreetView(${lat}, ${lng})">Street View</button>`).openPopup();
         map.setView([lat, lng]);
+
+        // Update dashboard
+        document.getElementById("deviceId").textContent = `🆔 Device ID: ${record.deviceId || 'ESP32-GPS'}`;
+        document.getElementById("location").textContent = `📍 Lat/Lng: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        document.getElementById("voltage").textContent = `🔋 Voltage: ${record.voltage || '3.7'} V`;
+        document.getElementById("battery").textContent = `⚡ Battery: ${record.battery || '90'}%`;
+        document.getElementById("sos").textContent = `🚨 SOS: ${record.sos ? 'Activated' : 'Safe'}`;
+        document.getElementById("accuracy").textContent = `📶 Accuracy: ${record.accuracy || 'N/A'}`;
+
       } catch (e) {
         console.error("Failed to fetch location", e);
       }
