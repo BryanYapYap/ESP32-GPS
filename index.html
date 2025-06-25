@@ -14,64 +14,50 @@
     }
     #map {
       height: 100vh;
-      width: 100vw;
+      width: calc(100vw - 220px);
+      float: right;
     }
     #dashboard {
-      width: 260px;
-      background-color: rgba(255,255,255,0.95);
-      padding: 15px;
+      width: 220px;
+      height: 100vh;
+      background-color: #f4f4f4;
+      padding: 16px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
       position: fixed;
-      top: 15px;
-      left: 15px;
-      z-index: 9999;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      left: 0;
+      top: 0;
+      z-index: 1000;
     }
     #dashboard h2 {
-      font-size: 18px;
-      margin: 0 0 10px 0;
+      font-size: 17px;
+      margin-bottom: 15px;
+      color: #333;
     }
     #dashboard p {
-      margin: 5px 0;
-      font-size: 14px;
+      margin: 6px 0;
+      font-size: 13px;
+      color: #555;
     }
-    .action-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    .button-group {
       margin-top: 12px;
     }
-    .btn {
+    .button-group button {
+      width: 100%;
+      margin-bottom: 8px;
       padding: 10px;
-      font-size: 14px;
+      font-size: 13px;
       border: none;
-      border-radius: 6px;
-      cursor: pointer;
+      border-radius: 4px;
       color: white;
-      transition: background 0.3s ease;
-    }
-    .btn.drive {
-      background-color: #28a745;
-    }
-    .btn.drive:hover {
-      background-color: #218838;
-    }
-    .btn.street {
       background-color: #007bff;
+      cursor: pointer;
     }
-    .btn.street:hover {
+    .button-group button:hover {
       background-color: #0056b3;
-    }
-
-    .leaflet-control-layers {
-      margin-top: 70px !important;
-      margin-right: 15px !important;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-
   <div id="dashboard">
     <h2>📡 Device Dashboard</h2>
     <p><strong>ID:</strong> <span id="deviceId">Loading...</span></p>
@@ -79,11 +65,13 @@
     <p><strong>Longitude:</strong> <span id="lng">-</span></p>
     <p><strong>Battery:</strong> <span id="battery">-</span></p>
     <p><strong>SOS:</strong> <span id="sos">-</span></p>
-    <div class="action-buttons">
-      <button class="btn drive" onclick="goToGMaps()">🚗 Drive Here</button>
-      <button class="btn street" onclick="goToStreetView()">🏙️ Street View</button>
+    <div class="button-group">
+      <button id="navBtn" onclick="goToGMaps()">🚗 Drive Here</button>
+      <button id="streetBtn" onclick="goToStreetView()">🏙️ Street View</button>
     </div>
   </div>
+
+  <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
