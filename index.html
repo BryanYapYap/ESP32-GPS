@@ -2,101 +2,88 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Real-Time Location Tracker</title>
+  <title>ESP32 Real-time GPS Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; }
-    .leaflet-top.leaflet-left {
-      top: 60px !important;
-    }
-    .custom-buttons {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: white;
+    #map { height: 100vh; width: 100vw; }
+    .leaflet-top.leaflet-right {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
-      z-index: 999;
     }
-    .custom-buttons button {
-      display: block;
-      margin: 5px 0;
-      width: 150px;
+    .custom-button {
+      background-color: white;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="custom-buttons">
-    <button onclick="setMapStyle('normal')">Normal Map</button>
-    <button onclick="setMapStyle('satellite')">Satellite</button>
-    <button onclick="setMapStyle('hybrid')">Hybrid</button>
-    <button onclick="openGoogleMaps()">🚘 驾车前往</button>
-    <button onclick="openStreetView()">🏙️ 街景查看</button>
-    <div id="coords"></div>
-  </div>
-
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    let map = L.map('map').setView([3.83095, 103.3261], 16);
-    let marker;
-    let tileLayer;
-    let currentLat = 3.83095;
-    let currentLng = 103.3261;
+    const map = L.map('map').setView([3.83, 103.32], 17);
 
-    function setMapStyle(style) {
-      if (tileLayer) map.removeLayer(tileLayer);
-      if (style === 'normal') {
-        tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-      } else if (style === 'satellite') {
-        tileLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-          subdomains:['mt0','mt1','mt2','mt3']
-        });
-      } else if (style === 'hybrid') {
-        tileLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-          subdomains:['mt0','mt1','mt2','mt3']
-        });
-      }
-      tileLayer.addTo(map);
-    }
-    setMapStyle('hybrid');
+    const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      attribution: 'Google Satellite'
+    });
+    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      attribution: 'Google Hybrid'
+    });
 
-    function fetchLocation() {
-      fetch('https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest', {
-        headers: {
-          'X-Access-Key': '$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6'
-        }
-      })
-      .then(res => res.json())
-      .then(data => {
+    hybrid.addTo(map); // default
+
+    const baseMaps = {
+      "Normal Map": normal,
+      "Satellite": satellite,
+      "Hybrid": hybrid
+    };
+    L.control.layers(baseMaps).addTo(map);
+
+    let marker = null;
+    const BIN_URL = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
+    const API_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
+
+    async function fetchLocation() {
+      try {
+        const res = await fetch(BIN_URL, {
+          headers: {
+            "X-Access-Key": API_KEY
+          }
+        });
+        const data = await res.json();
         const lat = data.record.location.lat;
         const lng = data.record.location.lng;
-        currentLat = lat;
-        currentLng = lng;
-        if (marker) {
-          marker.setLatLng([lat, lng]);
-        } else {
-          marker = L.marker([lat, lng]).addTo(map);
-        }
+
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat, lng]).addTo(map)
+          .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><button onclick="goToGMaps(${lat}, ${lng})">Drive Here</button><br><button onclick="goToStreetView(${lat}, ${lng})">Street View</button>`).openPopup();
         map.setView([lat, lng]);
-        document.getElementById("coords").innerText = `纬度: ${lat.toFixed(5)}\n经度: ${lng.toFixed(5)}`;
-      });
+      } catch (e) {
+        console.error("Failed to fetch location", e);
+      }
     }
 
-    function openGoogleMaps() {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${currentLat},${currentLng}`;
+    function goToGMaps(lat, lng) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
       window.open(url, '_blank');
     }
 
-    function openStreetView() {
-      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${currentLat},${currentLng}`;
+    function goToStreetView(lat, lng) {
+      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
       window.open(url, '_blank');
     }
 
-    fetchLocation();
     setInterval(fetchLocation, 5000);
+    fetchLocation();
   </script>
 </body>
 </html>
