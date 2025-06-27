@@ -12,12 +12,10 @@
       padding: 0;
       font-family: Arial, sans-serif;
     }
-
     #map {
       height: 100vh;
       width: 100vw;
     }
-
     #dashboard {
       width: 200px;
       background-color: rgba(255, 255, 255, 0.9);
@@ -30,25 +28,21 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       font-size: 12px;
     }
-
     #dashboard h2 {
       font-size: 14px;
       margin-bottom: 8px;
     }
-
     #dashboard p {
       margin: 4px 0;
       font-size: 12px;
       line-height: 1.4;
     }
-
     .action-buttons {
       display: flex;
       flex-direction: column;
       gap: 6px;
       margin-top: 8px;
     }
-
     .btn {
       padding: 6px 8px;
       font-size: 12px;
@@ -57,23 +51,18 @@
       cursor: pointer;
       color: white;
     }
-
     .btn.drive {
       background-color: #28a745;
     }
-
     .btn.drive:hover {
       background-color: #218838;
     }
-
     .btn.street {
       background-color: #007bff;
     }
-
     .btn.street:hover {
       background-color: #0056b3;
     }
-
     .leaflet-control-layers {
       margin-top: 60px !important;
       margin-right: 10px !important;
@@ -85,10 +74,11 @@
 
   <div id="dashboard">
     <h2>📡 Device</h2>
-    <p><strong>ID:</strong> <span id="deviceId">Loading...</span></p>
-    <p><strong>Lat:</strong> <span id="lat">-</span></p>
-    <p><strong>Lng:</strong> <span id="lng">-</span></p>
-    <p><strong>SOS:</strong> <span id="sos">-</span></p>
+    <p><strong>ID:</strong> <span id="deviceId">ESP32-Demo</span></p>
+    <p><strong>Lat:</strong> <span id="lat">3.826693</span></p>
+    <p><strong>Lng:</strong> <span id="lng">103.299173</span></p>
+    <p><strong>Battery:</strong> <span id="battery">-</span></p>
+    <p><strong>SOS:</strong> <span id="sos">✅ Normal</span></p>
     <div class="action-buttons">
       <button class="btn drive" onclick="goToGMaps()">🚗 Drive</button>
       <button class="btn street" onclick="goToStreetView()">🏙️ Street</button>
@@ -97,63 +87,27 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const defaultLat = 3.7745
-    const defaultLng = 103.2176;
+    const lat = 3.826693;
+    const lng = 103.299173;
+    const map = L.map('map').setView([lat, lng], 17);
 
-    const map = L.map('map').setView([defaultLat, defaultLng], 17);
     const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
     const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: 'Google Satellite' });
     const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: 'Google Hybrid' });
+
     hybrid.addTo(map);
     L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
-    const BIN_URL = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
-    const API_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
-
-    let marker = null;
-    let currentLat = null;
-    let currentLng = null;
-
-    async function fetchLocation() {
-      try {
-        const res = await fetch(BIN_URL, {
-          headers: { "X-Access-Key": API_KEY }
-        });
-        const data = await res.json();
-        const lat = data?.record?.location?.lat || defaultLat;
-        const lng = data?.record?.location?.lng || defaultLng;
-        currentLat = lat;
-        currentLng = lng;
-
-        document.getElementById("deviceId").textContent = data.record.device_id || "ESP32";
-        document.getElementById("lat").textContent = lat.toFixed(6);
-        document.getElementById("lng").textContent = lng.toFixed(6);
-        document.getElementById("battery").textContent = (data.record.battery || "-") + "%";
-        document.getElementById("sos").textContent = data.record.sos ? "🚨 Triggered" : "✅ Normal";
-
-        if (marker) map.removeLayer(marker);
-        marker = L.marker([lat, lng]).addTo(map)
-          .bindPopup(`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
-        map.setView([lat, lng]);
-      } catch (e) {
-        console.error("Error fetching location:", e);
-      }
-    }
+    let marker = L.marker([lat, lng]).addTo(map)
+      .bindPopup(`📍 Pahang Skills<br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`).openPopup();
 
     function goToGMaps() {
-      const lat = currentLat || defaultLat;
-      const lng = currentLng || defaultLng;
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
 
     function goToStreetView() {
-      const lat = currentLat || defaultLat;
-      const lng = currentLng || defaultLng;
       window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
     }
-
-    fetchLocation();
-    setInterval(fetchLocation, 5000);
   </script>
 </body>
 </html>
