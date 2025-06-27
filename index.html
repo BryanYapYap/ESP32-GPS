@@ -12,10 +12,12 @@
       padding: 0;
       font-family: Arial, sans-serif;
     }
+
     #map {
       height: 100vh;
       width: 100vw;
     }
+
     #dashboard {
       width: 200px;
       background-color: rgba(255, 255, 255, 0.9);
@@ -28,21 +30,25 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       font-size: 12px;
     }
+
     #dashboard h2 {
       font-size: 14px;
       margin-bottom: 8px;
     }
+
     #dashboard p {
       margin: 4px 0;
       font-size: 12px;
       line-height: 1.4;
     }
+
     .action-buttons {
       display: flex;
       flex-direction: column;
       gap: 6px;
       margin-top: 8px;
     }
+
     .btn {
       padding: 6px 8px;
       font-size: 12px;
@@ -51,18 +57,23 @@
       cursor: pointer;
       color: white;
     }
+
     .btn.drive {
       background-color: #28a745;
     }
+
     .btn.drive:hover {
       background-color: #218838;
     }
+
     .btn.street {
       background-color: #007bff;
     }
+
     .btn.street:hover {
       background-color: #0056b3;
     }
+
     .leaflet-control-layers {
       margin-top: 60px !important;
       margin-right: 10px !important;
@@ -87,19 +98,15 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([3.826693, 103.299173], 18);
+    const defaultLat = 3.855278;
+    const defaultLng = 103.320833;
 
+    const map = L.map('map').setView([defaultLat, defaultLng], 17);
     const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
     const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: 'Google Satellite' });
     const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: 'Google Hybrid' });
     hybrid.addTo(map);
     L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
-
-    // 默认显示固定位置：Pahang Skills
-    L.marker([3.826693, 103.299173])
-      .addTo(map)
-      .bindPopup("📍 Pahang Skills (Fixed Position)")
-      .openPopup();
 
     const BIN_URL = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest";
     const API_KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
@@ -114,12 +121,12 @@
           headers: { "X-Access-Key": API_KEY }
         });
         const data = await res.json();
-        const lat = data.record.location.lat;
-        const lng = data.record.location.lng;
+        const lat = data?.record?.location?.lat || defaultLat;
+        const lng = data?.record?.location?.lng || defaultLng;
         currentLat = lat;
         currentLng = lng;
 
-        document.getElementById("deviceId").textContent = data.record.device_id || "N/A";
+        document.getElementById("deviceId").textContent = data.record.device_id || "ESP32";
         document.getElementById("lat").textContent = lat.toFixed(6);
         document.getElementById("lng").textContent = lng.toFixed(6);
         document.getElementById("battery").textContent = (data.record.battery || "-") + "%";
@@ -129,22 +136,21 @@
         marker = L.marker([lat, lng]).addTo(map)
           .bindPopup(`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
         map.setView([lat, lng]);
-
       } catch (e) {
         console.error("Error fetching location:", e);
       }
     }
 
     function goToGMaps() {
-      if (currentLat && currentLng) {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${currentLat},${currentLng}`, "_blank");
-      }
+      const lat = currentLat || defaultLat;
+      const lng = currentLng || defaultLng;
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
 
     function goToStreetView() {
-      if (currentLat && currentLng) {
-        window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${currentLat},${currentLng}`, "_blank");
-      }
+      const lat = currentLat || defaultLat;
+      const lng = currentLng || defaultLng;
+      window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
     }
 
     fetchLocation();
