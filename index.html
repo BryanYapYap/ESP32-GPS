@@ -88,7 +88,6 @@
     <p><strong>ID:</strong> <span id="deviceId">Loading...</span></p>
     <p><strong>Lat:</strong> <span id="lat">-</span></p>
     <p><strong>Lng:</strong> <span id="lng">-</span></p>
-    <p><strong>Battery:</strong> <span id="battery">-</span></p>
     <p><strong>SOS:</strong> <span id="sos">-</span></p>
     <div class="action-buttons">
       <button class="btn drive" onclick="goToGMaps()">🚗 Drive</button>
@@ -98,8 +97,8 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const defaultLat = 3.826693
-    const defaultLng = 103.299173;
+    const defaultLat = 3.7745
+    const defaultLng = 103.2176;
 
     const map = L.map('map').setView([defaultLat, defaultLng], 17);
     const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
