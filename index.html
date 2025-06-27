@@ -86,8 +86,8 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const lat = 3.8309909;
-    const lng = 103.3260016;
+    const lat = 3.855880;
+    const lng = 103.319550;
     const map = L.map('map').setView([lat, lng], 17);
 
     const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
@@ -98,7 +98,7 @@
     L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
     let marker = L.marker([lat, lng]).addTo(map)
-      .bindPopup(`📍 Pahang Skills<br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`).openPopup();
+      .bindPopup.openPopup();
 
     function goToGMaps() {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
