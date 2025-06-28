@@ -2,103 +2,121 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>ESP32 Real-time GPS Tracker</title>
+  <title>People Safety Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
+      font-family: "Segoe UI", sans-serif;
     }
     #map {
       height: 100vh;
       width: 100vw;
     }
-    #dashboard {
-      width: 200px;
-      background-color: rgba(255, 255, 255, 0.9);
-      padding: 10px;
+    .toggle-btn {
       position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 9999;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      font-size: 12px;
-    }
-    #dashboard h2 {
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-    #dashboard p {
-      margin: 4px 0;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    .action-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
-    }
-    .btn {
-      padding: 6px 8px;
-      font-size: 12px;
+      top: 20px;
+      right: 20px;
+      background: #007bff;
+      color: white;
+      padding: 10px 16px;
       border: none;
       border-radius: 5px;
+      z-index: 1002;
+      font-size: 14px;
       cursor: pointer;
+    }
+    #dashboard {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 300px;
+      height: 100%;
+      background: #ffffff;
+      border-left: 4px solid #007bff;
+      box-shadow: -4px 0 10px rgba(0,0,0,0.2);
+      padding: 20px;
+      z-index: 1001;
+      transition: right 0.3s ease-in-out;
+    }
+    #dashboard h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #007bff;
+    }
+    #dashboard p {
+      font-size: 14px;
+      margin: 8px 0;
+    }
+    .btn-container {
+      margin-top: 20px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 8px 10px;
+      margin-right: 6px;
+      font-size: 13px;
+      border: none;
+      border-radius: 4px;
       color: white;
+      cursor: pointer;
     }
     .btn.drive {
       background-color: #28a745;
     }
-    .btn.drive:hover {
-      background-color: #218838;
-    }
     .btn.street {
-      background-color: #007bff;
-    }
-    .btn.street:hover {
-      background-color: #0056b3;
-    }
-    .leaflet-control-layers {
-      margin-top: 60px !important;
-      margin-right: 10px !important;
+      background-color: #17a2b8;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
 
+  <!-- 📊 Dashboard 按钮 -->
+  <button class="toggle-btn" onclick="toggleDashboard()">📊 Dashboard</button>
+
+  <!-- 📋 Dashboard 面板 -->
   <div id="dashboard">
-    <h2>📡 Device</h2>
-    <p><strong>ID:</strong> <span id="deviceId">ESP32-Demo</span></p>
-    <p><strong>Lat:</strong> <span id="lat">3.826693</span></p>
-    <p><strong>Lng:</strong> <span id="lng">103.299173</span></p>
-    <p><strong>SOS:</strong> <span id="sos">✅ Normal</span></p>
-    <div class="action-buttons">
+    <h2>📍 People Tracker</h2>
+    <p><strong>Individuals:</strong> 1</p>
+    <p><strong>Alerts Today:</strong> 2</p>
+    <p><strong>Last Active:</strong> 5 minutes ago</p>
+    <hr>
+    <p><strong>Status:</strong> ✅ Normal</p>
+    <p><strong>Battery:</strong> 🔋 Full</p>
+    <p><strong>Lat:</strong> <span id="lat">3.83099</span></p>
+    <p><strong>Lng:</strong> <span id="lng">103.32606</span></p>
+    <div class="btn-container">
       <button class="btn drive" onclick="goToGMaps()">🚗 Drive</button>
       <button class="btn street" onclick="goToStreetView()">🏙️ Street</button>
     </div>
   </div>
 
+  <!-- 🗺 地图容器 -->
+  <div id="map"></div>
+
+  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const lat = 3.8309939;
-    const lng = 103.3260640;
+    const lat = 3.83099;
+    const lng = 103.32606;
+
     const map = L.map('map').setView([lat, lng], 17);
 
     const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: 'Google Satellite' });
-    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: 'Google Hybrid' });
+    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}');
+    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}');
 
     hybrid.addTo(map);
-    L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
-    let marker = L.marker([lat, lng]).addTo(map)
-      .bindPopup.openPopup();
+    L.control.layers({
+      "Normal": normal,
+      "Satellite": satellite,
+      "Hybrid": hybrid
+    }).addTo(map);
+
+    let marker = L.marker([lat, lng]).addTo(map).bindPopup("Current Location").openPopup();
 
     function goToGMaps() {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
@@ -107,6 +125,12 @@
     function goToStreetView() {
       window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
     }
+
+    function toggleDashboard() {
+      const dash = document.getElementById("dashboard");
+      dash.style.right = dash.style.right === "0px" ? "-320px" : "0px";
+    }
   </script>
+
 </body>
 </html>
