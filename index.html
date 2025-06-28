@@ -30,10 +30,9 @@
     }
     #dashboard {
       position: fixed;
-      top: 0;
+      top: 20px;
       right: -320px;
       width: 300px;
-      height: 100%;
       background: #ffffff;
       border-left: 4px solid #007bff;
       box-shadow: -4px 0 10px rgba(0,0,0,0.2);
@@ -73,64 +72,71 @@
 </head>
 <body>
 
-  <!-- 📊 Dashboard 按钮 -->
-  <button class="toggle-btn" onclick="toggleDashboard()">📊 Dashboard</button>
+<button class="toggle-btn" onclick="toggleDashboard()">📊 Dashboard</button>
 
-  <!-- 📋 Dashboard 面板 -->
-  <div id="dashboard">
-    <h2>📍 People Tracker</h2>
-    <p><strong>Individuals:</strong> 1</p>
-    <p><strong>Alerts Today:</strong> 2</p>
-    <p><strong>Last Active:</strong> 5 minutes ago</p>
-    <hr>
-    <p><strong>Status:</strong> ✅ Normal</p>
-    <p><strong>Battery:</strong> 🔋 Full</p>
-    <p><strong>Lat:</strong> <span id="lat">3.83099</span></p>
-    <p><strong>Lng:</strong> <span id="lng">103.32606</span></p>
-    <div class="btn-container">
-      <button class="btn drive" onclick="goToGMaps()">🚗 Drive</button>
-      <button class="btn street" onclick="goToStreetView()">🏙️ Street</button>
-    </div>
+<div id="dashboard">
+  <h2>📍 People Tracker</h2>
+  <p><strong>Device:</strong> <span id="deviceId">Loading...</span></p>
+  <p><strong>Status:</strong> <span id="sos">Loading...</span></p>
+  <p><strong>Battery:</strong> <span id="battery">-</span></p>
+  <p><strong>Lat:</strong> <span id="lat">3.83099</span></p>
+  <p><strong>Lng:</strong> <span id="lng">103.32606</span></p>
+  <div class="btn-container">
+    <button class="btn drive" onclick="goToGMaps()">🚗 Drive</button>
+    <button class="btn street" onclick="goToStreetView()">🏙️ Street</button>
   </div>
+</div>
 
-  <!-- 🗺 地图容器 -->
-  <div id="map"></div>
+<div id="map"></div>
 
-  <!-- Leaflet -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    const lat = 3.83099;
-    const lng = 103.32606;
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const lat = 3.83099;
+  const lng = 103.32606;
+  let map = L.map('map').setView([lat, lng], 17);
 
-    const map = L.map('map').setView([lat, lng], 17);
+  const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+  const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}');
+  const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}');
+  hybrid.addTo(map);
 
-    const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}');
-    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}');
+  L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
-    hybrid.addTo(map);
+  let marker = L.marker([lat, lng]).addTo(map).bindPopup("Current Location").openPopup();
 
-    L.control.layers({
-      "Normal": normal,
-      "Satellite": satellite,
-      "Hybrid": hybrid
-    }).addTo(map);
+  function goToGMaps() {
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
+  }
 
-    let marker = L.marker([lat, lng]).addTo(map).bindPopup("Current Location").openPopup();
+  function goToStreetView() {
+    window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
+  }
 
-    function goToGMaps() {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
+  function toggleDashboard() {
+    const dash = document.getElementById("dashboard");
+    dash.style.right = dash.style.right === "0px" ? "-320px" : "0px";
+  }
+
+  async function fetchStatus() {
+    try {
+      const response = await fetch("https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3/latest", {
+        headers: {
+          "X-Access-Key": "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6"
+        }
+      });
+      const data = await response.json();
+      const record = data.record;
+      document.getElementById("deviceId").textContent = record.device_id || "SafetyDevice-01";
+      document.getElementById("sos").textContent = record.sos ? "🚨 Triggered" : "✅ Normal";
+      document.getElementById("battery").textContent = record.battery || "-";
+    } catch (error) {
+      console.error("Failed to fetch status:", error);
     }
+  }
 
-    function goToStreetView() {
-      window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
-    }
-
-    function toggleDashboard() {
-      const dash = document.getElementById("dashboard");
-      dash.style.right = dash.style.right === "0px" ? "-320px" : "0px";
-    }
-  </script>
+  fetchStatus();
+  setInterval(fetchStatus, 5000);
+</script>
 
 </body>
 </html>
