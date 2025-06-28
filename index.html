@@ -100,7 +100,7 @@
     hybrid.addTo(map);
     L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
-    let marker = L.marker([lat, lng]).addTo(map).bindPopup("📍 ESP32").openPopup();
+    let marker = L.marker([lat, lng]).addTo(map).bindPopup("📍 I'm Here!!!").openPopup();
 
     function goToGMaps() {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
