@@ -47,7 +47,7 @@
     }
     .btn.drive { background-color: #28a745; }
     .btn.street { background-color: #007bff; }
-    .btn.toggle { 
+    .btn.toggle {
       background-color: #6c757d;
       position: fixed;
       top: 10px;
@@ -105,6 +105,7 @@
     function goToGMaps() {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
+
     function goToStreetView() {
       window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
     }
@@ -114,17 +115,19 @@
       panel.style.display = panel.style.display === "none" ? "block" : "none";
     }
 
-    // === Viewer Record with JSONBin ===
+    // ===== Visitor Logging =====
     const binId = "685bcd5b8960c979a5b10ee3";
     const masterKey = "$2a$10$pXDgVY8ppAPPg1MRP5lCM.kO.UD505/0F5IEwNmoRuqhrRiLQbxDm";
     const jsonBinUrl = `https://api.jsonbin.io/v3/b/${binId}`;
 
-    const deviceName = navigator.userAgent.includes("iPhone") ? "📱 iPhone"
-                      : navigator.userAgent.includes("Android") ? "🤖 Android"
-                      : navigator.userAgent.includes("Windows") ? "🖥️ Windows"
-                      : navigator.userAgent.includes("Macintosh") ? "💻 Mac"
-                      : "📟 Unknown";
+    const userAgent = navigator.userAgent;
+    const deviceType =
+      userAgent.includes("iPhone") ? "iPhone" :
+      userAgent.includes("Android") ? "Android" :
+      userAgent.includes("Windows") ? "Windows" :
+      userAgent.includes("Macintosh") ? "Mac" : "Unknown";
 
+    const deviceId = "ESP32-1";  // 🛠️ 修改为 ESP32-2 / ESP32-3 ... 以示区分设备
     const timeNow = new Date().toLocaleTimeString('en-GB');
 
     fetch(jsonBinUrl, { headers: { "X-Master-Key": masterKey } })
@@ -133,12 +136,10 @@
         let data = json.record || {};
         let visitors = data.visitors || [];
 
-        // 移除旧设备，添加当前设备
-        visitors = visitors.filter(v => v.device !== deviceName);
-        visitors.push({ device: deviceName, time: timeNow });
+        visitors = visitors.filter(v => v.id !== deviceId);
+        visitors.push({ id: deviceId, type: deviceType, time: timeNow });
         if (visitors.length > 10) visitors.shift();
 
-        // 更新 JSONBin
         fetch(jsonBinUrl, {
           method: "PUT",
           headers: {
@@ -148,9 +149,10 @@
           body: JSON.stringify({ ...data, visitors })
         });
 
-        // 显示访问者
         const viewerList = document.getElementById("viewerList");
-        viewerList.innerHTML = visitors.map(v => `<li>${v.device} <small>(${v.time})</small></li>`).join("");
+        viewerList.innerHTML = visitors.map(v =>
+          `<li><strong>${v.id}</strong> (${v.type}) <small>[${v.time}]</small></li>`
+        ).join("");
       });
   </script>
 </body>
