@@ -2,179 +2,140 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>People Safety Tracker</title>
+  <title>ESP32 Real-time GPS Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
+    * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
-      font-family: "Segoe UI", sans-serif;
+      font-family: Arial, sans-serif;
     }
     #map {
       height: 100vh;
       width: 100vw;
     }
-    .toggle-btn {
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      background: #007bff;
-      color: white;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 5px;
-      z-index: 1002;
-      font-size: 14px;
-      cursor: pointer;
-    }
     #dashboard {
+      width: 220px;
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 10px;
       position: fixed;
-      top: 20px;
-      right: -320px;
-      width: 300px;
-      background: #ffffff;
-      border-left: 4px solid #007bff;
-      box-shadow: -4px 0 10px rgba(0,0,0,0.2);
-      padding: 20px;
-      z-index: 1001;
-      transition: right 0.3s ease-in-out;
+      bottom: 10px;
+      right: 10px;
+      z-index: 9999;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      font-size: 13px;
     }
     #dashboard h2 {
-      margin-top: 0;
-      font-size: 18px;
-      color: #007bff;
+      font-size: 16px;
+      margin-bottom: 8px;
     }
     #dashboard p {
-      font-size: 14px;
-      margin: 8px 0;
-    }
-    .btn-container {
-      margin-top: 20px;
+      margin: 3px 0;
+      font-size: 13px;
     }
     .btn {
-      display: inline-block;
-      padding: 8px 10px;
-      margin-right: 6px;
-      font-size: 13px;
+      padding: 6px 8px;
+      font-size: 12px;
       border: none;
-      border-radius: 4px;
-      color: white;
+      border-radius: 5px;
       cursor: pointer;
+      color: white;
+      margin-top: 6px;
     }
-    .btn.drive {
-      background-color: #28a745;
+    .btn.drive { background-color: #28a745; }
+    .btn.street { background-color: #007bff; }
+    .btn:hover { opacity: 0.9; }
+    .viewer {
+      font-size: 12px;
+      margin-top: 8px;
     }
-    .btn.street {
-      background-color: #17a2b8;
-    }
-    #viewerList {
-      padding-left: 18px;
-      font-size: 13px;
+    .viewer ul {
+      margin: 4px 0;
+      padding-left: 15px;
     }
   </style>
 </head>
 <body>
+  <div id="map"></div>
 
-<button class="toggle-btn" onclick="toggleDashboard()">📊 Dashboard</button>
-
-<div id="dashboard">
-  <h2>📍 People Tracker</h2>
-  <p><strong>Device:</strong> <span id="deviceId">Loading...</span></p>
-  <p><strong>Status:</strong> <span id="sos">Loading...</span></p>
-  <p><strong>Battery:</strong> <span id="battery">-</span></p>
-  <p><strong>Lat:</strong> <span id="lat">3.83099</span></p>
-  <p><strong>Lng:</strong> <span id="lng">103.32606</span></p>
-
-  <h3>👁 Currently Viewing</h3>
-  <ul id="viewerList">
-    <li>Loading...</li>
-  </ul>
-
-  <div class="btn-container">
+  <div id="dashboard">
+    <h2>📡 People Tracker</h2>
+    <p><strong>Device:</strong> SafetyDevice-01</p>
+    <p><strong>Status:</strong> ✅ Normal</p>
+    <p><strong>Battery:</strong> 90%</p>
+    <p><strong>Lat:</strong> 3.83099</p>
+    <p><strong>Lng:</strong> 103.32606</p>
     <button class="btn drive" onclick="goToGMaps()">🚗 Drive</button>
     <button class="btn street" onclick="goToStreetView()">🏙️ Street</button>
+
+    <div class="viewer">
+      <strong>👁️ Currently Viewing</strong>
+      <ul id="viewerList"><li>Loading...</li></ul>
+    </div>
   </div>
-</div>
 
-<div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const lat = 3.83099;
+    const lng = 103.32606;
+    const map = L.map('map').setView([lat, lng], 17);
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-  const lat = 3.83099;
-  const lng = 103.32606;
+    const normal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    const satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}');
+    const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}');
+    hybrid.addTo(map);
+    L.control.layers({ "Normal": normal, "Satellite": satellite, "Hybrid": hybrid }).addTo(map);
 
-  let map = L.map('map').setView([lat, lng], 17);
-  const hybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}');
-  hybrid.addTo(map);
-  L.marker([lat, lng]).addTo(map).bindPopup("Current Location").openPopup();
+    let marker = L.marker([lat, lng]).addTo(map).bindPopup("📍 ESP32").openPopup();
 
-  function goToGMaps() {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
-  }
-
-  function goToStreetView() {
-    window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
-  }
-
-  function toggleDashboard() {
-    const dash = document.getElementById("dashboard");
-    dash.style.right = dash.style.right === "0px" ? "-320px" : "0px";
-  }
-
-  async function fetchStatusAndUploadVisitor() {
-    const API = "https://api.jsonbin.io/v3/b/685bcd5b8960c979a5b10ee3";
-    const KEY = "$2a$10$ILjBbVQboACduWRv7UGvj.tukJnCdHhlhg3kAi.e.S3NeCZCTb5/6";
-
-    try {
-      const res = await fetch(`${API}/latest`, { headers: { "X-Access-Key": KEY } });
-      const data = await res.json();
-      const record = data.record;
-
-      document.getElementById("deviceId").textContent = record.device_id || "SafetyDevice-01";
-      document.getElementById("sos").textContent = record.sos ? "🚨 Triggered" : "✅ Normal";
-      document.getElementById("battery").textContent = record.battery || "-";
-
-      // 👥 Show visitors
-      let viewerList = (record.visitors || []).slice(-3).reverse();
-      const viewerEl = document.getElementById("viewerList");
-      viewerEl.innerHTML = viewerList.length > 0
-        ? viewerList.map(v => `<li>${v.device} - ${v.time}</li>`).join("")
-        : "<li>No active viewers</li>";
-
-      // 📤 Upload current visitor
-      const agent = navigator.userAgent;
-      const platform = /iPhone/i.test(agent) ? "iPhone"
-                     : /Android/i.test(agent) ? "Android"
-                     : /Windows/i.test(agent) ? "Windows"
-                     : /Mac/i.test(agent) ? "Mac"
-                     : "Other";
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString("en-GB", { hour12: false });
-
-      const newView = { device: platform, time: timeStr };
-      const updatedVisitors = [...(record.visitors || []), newView].slice(-10);
-
-      const uploadData = { ...record, visitors: updatedVisitors };
-
-      await fetch(API, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": KEY,
-          "X-Bin-Versioning": "false"
-        },
-        body: JSON.stringify({ record: uploadData })
-      });
-
-    } catch (e) {
-      console.error("JSONBin Error:", e);
+    function goToGMaps() {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
-  }
+    function goToStreetView() {
+      window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, "_blank");
+    }
 
-  fetchStatusAndUploadVisitor();
-  setInterval(fetchStatusAndUploadVisitor, 10000);
-</script>
+    // === 访问者记录逻辑（JSONBin） ===
+    const binId = "685bcd5b8960c979a5b10ee3";
+    const masterKey = "$2a$10$pXDgVY8ppAPPg1MRP5lCM.kO.UD505/0F5IEwNmoRuqhrRiLQbxDm";
+    const jsonBinUrl = `https://api.jsonbin.io/v3/b/${binId}`;
 
+    const deviceName = navigator.userAgent.includes("iPhone") ? "📱 iPhone"
+                      : navigator.userAgent.includes("Android") ? "🤖 Android"
+                      : navigator.userAgent.includes("Windows") ? "🖥️ Windows"
+                      : navigator.userAgent.includes("Macintosh") ? "💻 Mac"
+                      : "📟 Unknown";
+
+    const timeNow = new Date().toLocaleTimeString('en-GB');
+
+    fetch(jsonBinUrl, { headers: { "X-Master-Key": masterKey } })
+      .then(res => res.json())
+      .then(json => {
+        let data = json.record || {};
+        let visitors = data.visitors || [];
+
+        // 移除旧设备，添加当前设备
+        visitors = visitors.filter(v => v.device !== deviceName);
+        visitors.push({ device: deviceName, time: timeNow });
+        if (visitors.length > 10) visitors.shift(); // 保留最近10个
+
+        // 写入更新后的数据
+        fetch(jsonBinUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": masterKey
+          },
+          body: JSON.stringify({ ...data, visitors })
+        });
+
+        // 显示访客
+        const viewerList = document.getElementById("viewerList");
+        viewerList.innerHTML = visitors.map(v => `<li>${v.device} <small>(${v.time})</small></li>`).join("");
+      });
+  </script>
 </body>
 </html>
