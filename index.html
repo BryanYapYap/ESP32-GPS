@@ -155,7 +155,8 @@
             v.type === "iPhone" ? "📱 iPhone" :
             v.type === "Android" ? "🤖 Android" :
             v.type === "Windows" ? "🖥️ Windows" :
-            v.type === "Mac" ? "💻 Mac" :;
+            v.type === "Mac" ? "💻 Mac" :
+            "📟 Unknown";
         
           return `<li>${icon} - <strong>${v.id}</strong> <small>[${v.time}]</small></li>`;
         }).join("");
