@@ -125,7 +125,7 @@
       userAgent.includes("iPhone") ? "iPhone" :
       userAgent.includes("Android") ? "Android" :
       userAgent.includes("Windows") ? "Windows" :
-      userAgent.includes("Macintosh") ? "Mac" :
+      userAgent.includes("Macintosh") ? "Mac" : "Unknown";
       
     const deviceId = "ESP32-1";  // 🔁 每台设备请设置唯一名称
     const timeNow = new Date().toLocaleTimeString('en-GB');
@@ -156,7 +156,7 @@
             v.type === "Android" ? "🤖 Android" :
             v.type === "Windows" ? "🖥️ Windows" :
             v.type === "Mac" ? "💻 Mac" :
-             "📟 Unknown";
+        
           return `<li>${icon} - <strong>${v.id}</strong> <small>[${v.time}]</small></li>`;
         }).join("");
       });
